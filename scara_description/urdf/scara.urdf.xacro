@@ -1,14 +1,8 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="scara">
     
-    <!-- Load Simulated or Real Hardware Interfaces -->
     <xacro:arg name="is_sim" default="true"/>
-    
-    <!-- Include Gazebo Parameters -->
     <xacro:include filename="$(find scara_description)/urdf/scara_gazebo.xacro" />
-    
-    <!-- Include ros2_control Plugins -->
-    <!-- <xacro:include filename="$(find scara_description)/urdf/scara_ros2_control.xacro" /> -->
 
     <!-- Materiais / Cores -->
     <material name="blue">
@@ -21,12 +15,10 @@
         <color rgba="1 1 0 1"/>
     </material>
 
-    <!-- Useful XACRO Variables (Properties) -->
     <xacro:property name="PI" value="3.14159265359" />
     <xacro:property name="effort" value="30.0" />
     <xacro:property name="velocity" value="1.0" />
 
-    <!-- Useful Macros -->
     <xacro:macro name="default_inertial" params="mass">
         <inertial> 
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -35,17 +27,6 @@
         </inertial>
     </xacro:macro>
 
-    <xacro:macro name="default_transmission" params="number">
-        <transmission name="transmission_${number}">
-            <plugin>transmission_interface/SimpleTransmission</plugin>
-            <actuator name="motor_${number}" role="actuator1"/>
-            <joint name="joint_${number}" role="joint1">
-                <mechanical_reduction>1.0</mechanical_reduction>
-            </joint>
-        </transmission>
-    </xacro:macro>
-
-    <!-- Link WORLD -->
     <link name="world"/>
 
     <joint name="virtual_joint" type="fixed">
@@ -54,125 +35,187 @@
         <origin xyz="0 0 0" rpy="0 0 0"/>
     </joint>
 
-    <!-- Link BASE_LINK -->
+    <!-- BASE LINK (bs.stl) -->
     <link name="base_link">
         <xacro:default_inertial mass="2.0"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0.15"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="blue"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0.15"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- JOINT 1 (base_link -> es_link) -->
+    <joint name="joint_1" type="revolute">
+        <parent link="base_link"/>
+        <child link="es_link"/>
+        
+        <origin xyz="0 0 0.309" rpy="0 0 0"/> 
+        <axis xyz="0 0 1"/>
+        <limit lower="-1.57" upper="1.57" effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <!-- ES LINK (es.stl) -->
     <link name="es_link">
         <xacro:default_inertial mass="0.5"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="-0.1 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/es.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="white"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="-0.1 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/es.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- JOINT 2 (es_link -> as_link) -->
+    <joint name="joint_2" type="revolute">
+        <parent link="es_link"/>
+        <child link="as_link"/>
+        <origin xyz="-0.2 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-1.57" upper="1.57" effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <!-- AS LINK (as.stl) -->
     <link name="as_link">
         <xacro:default_inertial mass="0.5"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="-0.105 0 0.125"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/as.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="yellow"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="-0.105 0 0.125"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/as.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- JOINT 3 (as_link -> cs_link) - Translação/Prismática no eixo Z -->
+    <joint name="joint_3" type="prismatic">
+        <parent link="as_link"/>
+        <child link="cs_link"/>
+        <origin xyz="-0.25 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="0.127" upper="0.154" effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <!-- CS LINK (cs.stl) -->
     <link name="cs_link">
         <xacro:default_inertial mass="0.15"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/cs.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="blue"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/cs.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- JOINT WRIST (cs_link -> g1_gripper) -->
+    <joint name="wrist_joint" type="revolute">
+        <parent link="cs_link"/>
+        <child link="g1_gripper"/>
+        <origin xyz="0 0 -0.1" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-1.57" upper="1.57" effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <!-- G1 GRIPPER (g1.stl) -->
     <link name="g1_gripper">
         <xacro:default_inertial mass="0.1"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g1.stl" scale="0.001 0.001 0.001"/>
             </geometry>
-            <material name="blue"/>
+            <material name="white"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g1.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- GRIPPER JOINT 1 (g1_gripper -> g2_gripper) -->
+    <joint name="gripper_joint1" type="revolute">
+        <parent link="g1_gripper"/>
+        <child link="g2_gripper"/>
+        <origin xyz="0.05 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-1.57" upper="1.57" effort="${effort}" velocity="${velocity}"/>
+    </joint>
+
+    <!-- G2 GRIPPER (g2.stl) -->
     <link name="g2_gripper">
         <xacro:default_inertial mass="0.02"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g2.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="blue"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g2.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
 
+    <!-- GRIPPER JOINT 2 (g1_gripper -> g3_gripper) -->
+    <joint name="gripper_joint2" type="revolute">
+        <parent link="g1_gripper"/>
+        <child link="g3_gripper"/>
+        <origin xyz="-0.05 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-1.57" upper="1.57" effort="${effort}" velocity="${velocity}"/>
+        <!-- Adicione a tag mimic se g3 imitar g2: -->
+        <mimic joint="gripper_joint1" multiplier="-1"/>
+    </joint>
+
+    <!-- G3 GRIPPER (g3.stl) -->
     <link name="g3_gripper">
         <xacro:default_inertial mass="0.02"/>
         <visual>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g3.stl" scale="0.001 0.001 0.001"/>
             </geometry>
             <material name="blue"/>
         </visual>
         <collision>
-            <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <mesh filename="package://scara_description/meshes/bs.stl" scale="0.01 0.01 0.01"/>
+                <mesh filename="package://scara_description/meshes/g3.stl" scale="0.001 0.001 0.001"/>
             </geometry>
         </collision>
     </link>
-
 
 </robot>
